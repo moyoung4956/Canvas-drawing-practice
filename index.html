@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>長輩圖產生器</title>
+    <script src="https://kit.fontawesome.com/be5a7edbfa.js" crossorigin="anonymous"></script>
+
+    <style>
+        * {
+            color: rgb(76, 67, 52);
+            text-align: center;
+        }
+
+        canvas {
+            border: 3px solid rgb(106, 94, 73);
+            display: block;
+            margin: 0 auto 10px auto;
+        }
+
+        h1 {
+            text-align: center;
+            background-color:rgb(245, 212, 152);
+        }
+
+        #workField{
+            margin: 0 auto;
+            width: 1000px;
+            display: grid;
+            grid-template-columns: 2fr 2fr 2fr;
+        }
+
+
+        #workField>div{ 
+            margin: 10px auto 10px auto;
+        }
+    
+
+        button,.file{
+            height: 30px;
+            border-radius: 30px;
+            border: 2px solid rgb(245, 212, 152);
+            background-color: lemonchiffon;
+            cursor: pointer;
+        }
+
+        button:hover,.file:hover{
+            background-color: rgb(245, 212, 152);
+            transition: .3s;
+        }
+
+        input:not(#unloader),select{
+            border: 2px solid sienna;
+            border-radius: 10px;
+            height: 30px;
+            margin-bottom: 10px;
+        }
+
+        p:not(.labelTxt){
+           background-color: rgb(245, 212, 152); 
+           font-size: 30px;
+           font-weight: bold;
+           border-radius: 2px;
+           width: 75px;
+           margin: 0 auto;
+           margin: 10px auto 10px auto;
+        }
+
+        #showTxt { color: red;}
+
+        label:not(.file),.labelTxt{
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        #unloader{display: none;}
+
+        .file{
+            cursor: pointer;
+            padding: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>長輩歡樂製作圖生產器</h1>
+    <canvas id="myCanvas" width="800" height="450"></canvas>
+    <div id="workField">
+        <div>
+            <p>Step1</p>
+            <p class="labelTxt">選擇您要上傳的圖片:</p>
+            <label class="file">上傳圖片
+            <input type="file" id="unloader">
+            </label>
+            <span id="showTxt"></span>
+        </div>
+        <div>
+            <p>Step2</p>
+            <label for="colorSelector">畫筆顏色:</label>
+            <input type="color" id="colorSelector">
+            <label for="lineThickness">畫筆粗細:</label>
+            <select id="lineThickness">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+            </select>
+            <p class="labelTxt">輸入你想要的文字:</p>
+            <label for="txtColor">文字顏色:</label>
+            <input type="color" id="txtColor">
+            <label for="txtSize">文字大小:</label>
+            <select id="txtSize">
+                <option value="1">特小</option>
+                <option value="2">小</option>
+                <option value="3">中</option>
+                <option value="4">大</option>
+                <option value="5">特大</option>
+                <option value="6">特特大</option>
+            </select><br>
+            <input type="text" id="inputTxt">
+            <button id="txt">文字送出</button>
+            <div class="control">
+                <button onclick="undo()">
+                    <i class="fas fa-hand-point-left"></i>
+                    Undo
+                </button>
+                <button onclick="redo()">
+                    <i class="fas fa-hand-point-right"></i>
+                    Redo
+                </button>
+            </div>
+        </div>
+        <div>
+            <p>Step3</p>
+            <button onclick="download()">SAVE</button>
+        </div>
+        
+
+    </div>
+
+    <script>
+        var c = document.getElementById('myCanvas');
+        var ctx = c.getContext('2d');
+        var myImgFile = document.querySelector('#unloader');
+        var scaleW = 0;
+        var scaleH = 0;
+
+
+
+        //建立fileReader物件
+        myImgFile.addEventListener('change', function (e) {
+            //清掉之前上傳的圖片
+            ctx.clearRect(0, 0, c.width, c.height)
+            var img = new Image();
+            img.onload = function () {
+                scaleW = (c.width / img.width).toFixed(3);
+                scaleH = (c.height / img.height).toFixed(3);
+
+                // c.width = img.width;
+                // c.height = img.height;
+
+
+
+                if (c.width < img.width && c.height < img.width) {
+                    console.log(`scaleW: ${scaleW}  ,  scaleH: ${scaleH}`);
+                    if (scaleW > scaleH) {
+                        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, img.width * scaleW, img.height * scaleW);
+                    } else {
+                        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, img.width * scaleH, img.width * scaleH);
+                    }
+                } else if (c.width < img.width) {
+                    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, img.width * scaleW, img.height * scaleW);
+                } else if (c.height < img.width) {
+                    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, img.width * scaleH, img.width * scaleH);
+                } else {
+                    ctx.drawImage(img, 0, 0);
+                }
+                pushArray();
+                draw();
+
+
+
+            }
+            img.onerror = function () {
+                showTxt.innerText = "您所提供的檔案沒有辦法上傳";
+            };
+            img.src = URL.createObjectURL(e.target.files[0]);
+
+        });
+
+        function draw() {
+            var draw = false;//是否要繪圖
+            var startPos = [0, 0]; //繪圖起始位置
+            var newPos = [0, 0];
+            var color = document.getElementById('colorSelector');
+            var line = document.getElementById('lineThickness');
+            ctx.strokeStyle = color.value;
+            ctx.lineWidth = line.value;
+            console.log(ctx.strokeStyle);
+            console.log(ctx.lineWidth);
+            var eraserOld;
+
+            //監聽改變顏色
+            color.addEventListener('input', function () {
+                ctx.strokeStyle = color.value;
+            });
+
+            //監聽改變粗細
+            line.addEventListener('input', function () {
+                ctx.lineWidth = line.value*2;
+            }) 
+
+            //畫筆畫下去事件
+            c.addEventListener('mousedown', function (e) {
+                draw = true;
+                startPos = [e.pageX - c.offsetLeft, e.pageY - c.offsetTop];//取得開始畫的位置
+
+            });
+
+            //畫筆移動
+            c.addEventListener('mousemove', function (e) {
+                if (draw) {
+
+                    //取得結束畫的位置
+                    newPos = [e.pageX - c.offsetLeft, e.pageY - c.offsetTop];
+                    ctx.beginPath();//重新開始路徑
+                    ctx.moveTo(startPos[0], startPos[1]); //移動到起始位置
+                    ctx.lineTo(newPos[0], newPos[1]); //畫線到結束的位置
+                    ctx.closePath(); //關閉繪畫的路徑
+                    ctx.stroke(); //畫線上去
+                    startPos = newPos; //紀錄最後的位置為目前的位置
+
+
+                }
+            })
+
+            //畫筆起來(停止繪畫)
+            c.addEventListener('mouseup', function (e) {
+                draw = false;
+                pushArray();
+            });
+        };
+
+
+
+
+        
+        var x = c.width/2;
+        var y = c.height/2;
+        var inputTxt = document.getElementById('inputTxt');
+        var txtSize = document.getElementById('txtSize');
+        var txtColor = document.getElementById('txtColor');
+        txt.addEventListener('click', function (e) {
+            
+            
+            ctx.font = `bolder ${txtSize.value*22.5}px Arial italic`;
+            ctx.textAlign = "center";
+            ctx.strokeStyle = "#000000";
+            ctx.strokeText(inputTxt.value, x, y)
+            ctx.font =`bolder ${txtSize.value*22}px Arial italic`;
+            ctx.fillStyle = txtColor.value;
+            ctx.fillText(inputTxt.value, x, y)
+
+            pushArray();
+        })
+
+
+
+
+
+        var Push = [];
+        var step = -1;
+        function pushArray() {
+            step++;
+            if (step < Push.length) {
+                Push.length = step;
+            }
+            Push.push(c.toDataURL());//當前影像存成 Base64 編碼的字串並放入陣列
+            //console.log( step + ":" + Push.length);
+        };
+
+        function undo() {
+            if (step > 0) {
+                step--;//回到前面的index
+                var canvasPic = new Image();
+                canvasPic.src = Push[step];//載入剛剛存放的影像
+                canvasPic.onload = function () {
+                    ctx.clearRect(0, 0, c.width, c.height)
+                    ctx.drawImage(canvasPic, 0, 0);
+                }
+                //console.log( step + ":" + Push.length);
+            }
+        };
+
+
+
+
+        function redo() {
+            if (step < Push.length - 1) {
+                step++;//回到後面的index
+                var canvasPic = new Image();
+                canvasPic.src = Push[step];
+                canvasPic.onload = function () {
+                    ctx.clearRect(0, 0, c.width, c.height)
+                    ctx.drawImage(canvasPic, 0, 0);
+                }
+                //console.log( step + ":" + Push.length);
+            }
+        }
+
+        //download
+        function download() {
+            //console.log(c.toDataURL('image/png'));
+            var link = document.createElement('a');
+            link.download = "my-image.png";
+            link.href = c.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+
+</html>
